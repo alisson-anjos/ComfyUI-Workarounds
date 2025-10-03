@@ -29,7 +29,7 @@ Documentation = "https://github.com/alisson-anjos/ComfyUI-Workarounds/wiki"
 "Bug Tracker" = "https://github.com/alisson-anjos/ComfyUI-Workarounds/issues"
 
 [tool.comfy]
-PublisherId = "AlissonAnjos"
+PublisherId = "alisson-anjos"
 DisplayName = "ComfyUI-Workarounds"
 Icon = ""
 includes = [] 
