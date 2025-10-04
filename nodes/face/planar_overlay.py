@@ -52,8 +52,8 @@ class PlanarFaceOverlay:
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "MASK", "IMAGE", "STRING", "STRING", "IMAGE", "IMAGE", "IMAGE")
-    RETURN_NAMES = ("result", "face_mask", "debug_preview", "src_landmarks_in_target_json", "metrics_json", "face_only_target", "face_new_pose_source", "pose_map")
+    RETURN_TYPES = ("IMAGE", "MASK", "IMAGE", "STRING", "STRING", "IMAGE", "IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("result", "face_mask", "debug_preview", "src_landmarks_in_target_json", "metrics_json", "face_only_target", "face_new_pose_source", "pose_map", "source_color_match")
     FUNCTION = "overlay"
 
     def overlay(self, source_face, target_body, auto_flip, align_rotation, pre_normalize_camera,
@@ -129,6 +129,13 @@ class PlanarFaceOverlay:
             src_anchor = self._get_anchor_point(src_lm, anchor_point)
             # após normalizar, o ângulo da fonte é zero no eixo escolhido
             src_axis_angle = 0.0
+
+        # Source color-match only (no displacement): apply color match in source space
+        src_color_match = src_np.copy()
+        if color_match:
+            # Resize target to source size so stats are computed on the same mask area
+            tgt_resized_for_src = cv2.resize(tgt_np, (sw, sh), interpolation=cv2.INTER_LINEAR)
+            src_color_match = self._match_color(src_np, tgt_resized_for_src, src_mask, color_match_method, color_match_strength)
 
         # Ângulo do alvo (eixo da câmara do corpo)
         tgt_axis_angle = self._axis_angle(tgt_lm, alignment_axis)
@@ -288,9 +295,10 @@ class PlanarFaceOverlay:
         face_only_target_t = numpy_to_tensor(face_only_target)
         face_new_pose_source_t = numpy_to_tensor(face_new_pose_source)
         pose_map_t = numpy_to_tensor(pose_map)
+        source_color_match_t = numpy_to_tensor(src_color_match)
         
         return (result_t, mask_t, debug_t, landmarks_json, metrics_json,
-                face_only_target_t, face_new_pose_source_t, pose_map_t)
+                face_only_target_t, face_new_pose_source_t, pose_map_t, source_color_match_t)
 
     def _create_face_mask(self, landmarks, shape):
         """Creates an oval face mask from landmarks"""

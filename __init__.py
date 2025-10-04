@@ -9,6 +9,7 @@ from .nodes.face.face_detect import FaceLandmarkDetector
 from .nodes.face.face_3d_projection import Face3DProjection
 from .nodes.face.planar_overlay import PlanarFaceOverlay
 from .nodes.face.face_region_options import FaceRegionOptions
+from .nodes.face.skin_tone import SkinToneDetector, SkinToneColorMatch
 from .nodes.image.transform import ImageTransform
 from .nodes.image.composite import ImageComposite
 
@@ -22,6 +23,8 @@ NODE_CLASS_MAPPINGS = {
     "WA_Face3DProjection": Face3DProjection,
     "WA_PlanarFaceOverlay": PlanarFaceOverlay,
     "WA_FaceRegionOptions": FaceRegionOptions,
+    "WA_SkinToneDetector": SkinToneDetector,
+    "WA_SkinToneColorMatch": SkinToneColorMatch,
     
     # Image nodes
     "WA_ImageTransform": ImageTransform,
@@ -35,6 +38,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "WA_Face3DProjection": "3D Face Projection 🔧",
     "WA_PlanarFaceOverlay": "Planar Face Overlay 🔧",
     "WA_FaceRegionOptions": "Face Region Options 🔧",
+    "WA_SkinToneDetector": "Skin Tone Detector 🔧",
+    "WA_SkinToneColorMatch": "Skin Tone Color Match 🔧",
     "WA_ImageTransform": "Image Transform 🔧",
     "WA_ImageComposite": "Image Composite 🔧",
 }
