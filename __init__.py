@@ -13,6 +13,13 @@ from .nodes.face.skin_tone import SkinToneDetector, SkinToneColorMatch
 from .nodes.image.transform import ImageTransform
 from .nodes.image.composite import ImageComposite
 
+from .nodes.flowmatch_scheduler import (
+    FlowMatchScheduler,
+    FlowMatchSchedulerPresets,
+    FlowMatchAutoConfig,
+    FlowMatchGuide
+)
+
 __version__ = "1.0.0"
 
 NODE_CLASS_MAPPINGS = {
@@ -29,6 +36,11 @@ NODE_CLASS_MAPPINGS = {
     # Image nodes
     "WA_ImageTransform": ImageTransform,
     "WA_ImageComposite": ImageComposite,
+    
+    "FlowMatchScheduler": FlowMatchScheduler,
+    "FlowMatchSchedulerPresets": FlowMatchSchedulerPresets,
+    "FlowMatchAutoConfig": FlowMatchAutoConfig,
+    "FlowMatchGuide": FlowMatchGuide,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -42,6 +54,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "WA_SkinToneColorMatch": "Skin Tone Color Match 🔧",
     "WA_ImageTransform": "Image Transform 🔧",
     "WA_ImageComposite": "Image Composite 🔧",
+    "FlowMatchScheduler": "FlowMatch Scheduler (Advanced)",
+    "FlowMatchSchedulerPresets": "FlowMatch Scheduler Presets",
+    "FlowMatchAutoConfig": "FlowMatch Auto Config",
+    "FlowMatchGuide": "FlowMatch Settings Guide",
 }
 
 WEB_DIRECTORY = "./web"
