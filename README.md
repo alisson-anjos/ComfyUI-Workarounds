@@ -1,198 +1,229 @@
-# ComfyUI-Workarounds — Planar Face Overlay and Region Options
+# ComfyUI-Workarounds
 
-This repository provides practical ComfyUI nodes for fast, planar face overlay without non-linear warping, plus flexible region masks to transfer the full head (face + hair + eyebrows + eyes + nose + mouth) or any combination of regions. It also includes optional color matching and JSON diagnostics to integrate with downstream logic.
+A collection of practical and specialized nodes for ComfyUI, providing advanced face overlay, region masking, and scheduling solutions for various AI models.
 
-- Node keys:
-  - WA_PlanarFaceOverlay
-  - WA_FaceRegionOptions
-- Python: 3.10+
-- Dependencies: see requirements.txt (OpenCV, NumPy, MediaPipe, SciPy, Torch)
+[![GitHub stars](https://img.shields.io/github/stars/alisson-anjos/ComfyUI-Workarounds?style=social)](https://github.com/alisson-anjos/ComfyUI-Workarounds)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-## Installation
+## 🌟 Features
 
-1) Ensure you have the dependencies:
-- pip install -r requirements.txt
+- **Planar Face Overlay**: Fast face swapping with planar transforms only (no warping)
+- **Face Region Options**: Flexible region masks for selective face part transfer
+- **FlowMatch Scheduler**: Advanced scheduling for ai-toolkit models (Flux, Qwen, Z-Image-Turbo)
+- **Color Matching**: LAB and mean-based color harmonization
+- **JSON Diagnostics**: Detailed metrics and landmark data for automation
 
-2) Copy or symlink this folder into ComfyUI/custom_nodes.
+## 📦 Installation
 
-3) Restart ComfyUI.
+### Via ComfyUI Manager (Recommended)
+1. Open ComfyUI Manager
+2. Search for "ComfyUI-Workarounds"
+3. Click Install and restart ComfyUI
 
-If MediaPipe fails, ensure the correct version for your Python and environment. On some Linux setups, you may need system-level packages for video libs.
+### Manual Installation
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/alisson-anjos/ComfyUI-Workarounds.git
+cd ComfyUI-Workarounds
+pip install -r requirements.txt
+# Restart ComfyUI
+```
 
-## Nodes Overview
+### Dependencies
+- Python 3.10+
+- OpenCV (`cv2`)
+- NumPy
+- MediaPipe
+- SciPy
+- PyTorch
+- See `requirements.txt` for complete list
 
-### 1) Planar Face Overlay (WA_PlanarFaceOverlay)
+## 📚 Nodes Documentation
 
-Overlays a source face image onto a target body image using only planar transforms (flip/mirror, rotation, translation, uniform scale). It does not use non-linear warp (no perspective/TPS). It supports:
-- Automatic orientation matching (mirror/flip) based on yaw heuristics
-- Camera normalization (pre-normalize) aligning either eye-line (horizontal) or nose–chin axis (vertical)
-- Anchor-based alignment (nose tip, eye center, or bbox center)
-- Optional color match (LAB or per-channel mean)
-- Optional external region mask (combine with Face Region Options)
-- JSON outputs for landmarks (transformed to target space) and metrics/diagnostics
+### 🎭 Face Overlay Nodes
 
-Inputs (required):
-- source_face (IMAGE): face image to transfer
-- target_body (IMAGE): destination/body image
-- auto_flip (BOOLEAN): auto mirror the source to match the target orientation; default True
-- align_rotation (BOOLEAN): align rotation to target; default True
-- pre_normalize_camera (BOOLEAN): pre-rotate the source so the chosen axis is normalized; default True
-- alignment_axis (["nose", "eyes"]): which axis to normalize/align
-  - nose: normalize nose→chin to vertical (0° = perfectly vertical nose)
-  - eyes: normalize eye-line to horizontal (0° = leveled eyes)
-- anchor_point (["nose_tip", "eye_center", "bbox_center"]): pivot used for rotation/scale/translation
-- scale_method (["interocular", "bbox_width", "bbox_height", "nose_to_chin"]): how to estimate scale
-  - interocular: distance between eyes
-  - bbox_width/height: face bbox size
-  - nose_to_chin: nose tip to chin distance
-- scale_adjust (FLOAT): fine-tune scale multiplier (default 1.0)
-- offset_x (INT), offset_y (INT): manual pixel offsets
-- feather (INT): Gaussian blur radius for the mask (edge feathering)
-- mask_expand (INT): morphology grow/shrink the mask region
-- color_match (BOOLEAN): enable color match; default False
-- color_match_method (["lab", "mean"]): LAB-based or simple mean shift
-- color_match_strength (FLOAT 0..1): blend strength of color match
-- show_box (BOOLEAN): show rectangle of the applied region in the debug output
+#### WA_PlanarFaceOverlay
+Overlays a source face onto a target body using only planar transforms (flip/mirror, rotation, translation, uniform scale). Perfect for fast face swapping without complex warping.
 
-Inputs (optional):
-- use_region_mask (BOOLEAN): use a custom region mask instead of the default face oval
-- region_mask (MASK): mask input; only used when use_region_mask = True
+**Key Features:**
+- ✨ Automatic orientation matching (mirror/flip) based on yaw heuristics
+- 📐 Camera normalization aligning eye-line or nose-chin axis
+- 🎯 Anchor-based alignment (nose tip, eye center, or bbox center)
+- 🎨 Optional color matching (LAB or per-channel mean)
+- 📊 JSON outputs for landmarks and metrics
 
-Outputs:
-- result (IMAGE): final composited image
-- face_mask (MASK): mask used after transformation
-- debug_preview (IMAGE): target with overlay region box and info text (angle/scale/flip)
-- src_landmarks_in_target_json (STRING): JSON of the source landmarks transformed into target space; shape (N,2)
-- metrics_json (STRING): JSON diagnostics:
-  - alignment_axis: "nose" or "eyes"
-  - anchor_point: "nose_tip" | "eye_center" | "bbox_center"
-  - angle_deg: applied rotation in degrees
-  - scale: applied scale factor
-  - flipped: whether mirroring was applied
-  - yaw_sign: {"source": -1|0|1, "target": -1|0|1} (nose vs eyes-center heuristic)
-  - anchor_src_xy: original source anchor (pixels in source)
-  - anchor_tgt_xy: target anchor (pixels in target)
-  - anchor_src_in_target_xy: source anchor transformed into target space
-  - applied_color_match: boolean
-  - color_match_method: "lab"|"mean"|null
-  - color_match_strength: float|null
-  - applied_bbox_xyxy: [x_min, y_min, x_max, y_max] bounding box of the applied mask area in the target
-  - target_size_hw: {"h": H, "w": W}
+**Inputs:**
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `source_face` | IMAGE | Face to transfer | Required |
+| `target_body` | IMAGE | Destination image | Required |
+| `auto_flip` | BOOLEAN | Auto mirror to match orientation | True |
+| `align_rotation` | BOOLEAN | Align rotation to target | True |
+| `pre_normalize_camera` | BOOLEAN | Pre-rotate source axis | True |
+| `alignment_axis` | CHOICE | "nose" or "eyes" | "nose" |
+| `anchor_point` | CHOICE | "nose_tip", "eye_center", "bbox_center" | "nose_tip" |
+| `scale_method` | CHOICE | "interocular", "bbox_width", "bbox_height", "nose_to_chin" | "interocular" |
+| `scale_adjust` | FLOAT | Fine-tune scale (0.5-2.0) | 1.0 |
+| `offset_x/y` | INT | Manual pixel offsets | 0 |
+| `feather` | INT | Gaussian blur radius | 8 |
+| `mask_expand` | INT | Grow/shrink mask | 0 |
+| `color_match` | BOOLEAN | Enable color matching | False |
+| `color_match_method` | CHOICE | "lab" or "mean" | "lab" |
+| `color_match_strength` | FLOAT | Blend strength (0-1) | 0.7 |
 
-Algorithm summary:
-1) Detect landmarks in source and target using MediaPipe.
-2) Auto flip (mirror) the source:
-   - First, compare yaw direction using nose relative to eye center (left/right facing)
-   - If ambiguous, fallback to eye ordering (left vs right eye X positions)
-3) Build the source mask:
-   - Either the face oval (default) or an external region mask if provided
-4) Pre-normalize camera:
-   - If alignment_axis = "eyes": rotate source so eyes are horizontal
-   - If alignment_axis = "nose": rotate source so nose→chin is vertical
-5) Compute final transform:
-   - Angle is the target axis angle (or difference) depending on pre_normalize_camera
-   - Scale via configured method
-   - Rotate+scale around the chosen anchor; then translate to target anchor and apply user offsets
-6) Optionally color match (LAB or mean) inside the mask region
-7) Composite onto the target using the (feathered/expanded) mask
-8) Output diagnostics JSONs
+**Outputs:**
+- `result` (IMAGE): Final composited image
+- `face_mask` (MASK): Applied mask after transformation
+- `debug_preview` (IMAGE): Debug visualization with metrics
+- `src_landmarks_in_target_json` (STRING): Transformed landmarks JSON
+- `metrics_json` (STRING): Detailed metrics and diagnostics
 
-Notes on color match:
-- LAB method: matches mean and standard deviation in LAB channels within the masked region and blends by color_match_strength
-- mean method: quick per-channel BGR mean shift inside the masked region
-- The result is clipped to 0..255 and converted back to RGB for ComfyUI
+#### WA_FaceRegionOptions
+Builds customizable region masks from landmark geometry. Control exactly which facial features to transfer.
 
-Troubleshooting:
-- If no face is detected, the node returns the original target and an empty mask
-- If the overlay is offset, adjust offsets and verify anchor_point and alignment_axis
-- If color match looks too strong, reduce color_match_strength or try "mean" method
-- Auto flip might flip unexpectedly for extreme profiles or noisy landmarks; disable auto_flip if needed and flip manually upstream
+**Presets:**
+- `face_oval`: Standard facial oval (no forehead)
+- `face_with_forehead`: Broader coverage including forehead
+- `full_head`: Convex hull of all landmarks (widest coverage)
+- `custom`: Mix and match individual regions
 
-### 2) Face Region Options (WA_FaceRegionOptions)
+**Custom Region Options:**
+- Face skin
+- Forehead
+- Eyebrows
+- Eyes
+- Nose
+- Mouth
 
-Builds region masks from landmark geometry. You can quickly generate masks to transfer:
-- face skin (oval)
-- forehead (broader top area)
-- eyebrows
-- eyes
-- nose
-- mouth
-- full head (convex hull)
+**Parameters:**
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `image` | IMAGE | Source for landmarks | Required |
+| `preset` | CHOICE | Region preset | "face_oval" |
+| `expand` | INT | Morphology size | 0 |
+| `feather` | INT | Edge feathering | 0 |
 
-Use cases:
-- Transfer full head (face + hair/eyebrows/eyes/nose/mouth)
-- Transfer only specific parts (e.g., eyes + eyebrows + mouth over skin)
-- Use as region_mask in PlanarFaceOverlay to control which areas blend
+### ⚡ FlowMatch Scheduler Nodes (New!)
 
-Inputs:
-- image (IMAGE): image whose landmarks define the regions (usually the source face)
-- preset (["custom","face_oval","face_with_forehead","full_head"]):
-  - face_oval: standard facial oval (no forehead)
-  - face_with_forehead: broader coverage including forehead
-  - full_head: convex hull of all landmarks (widest coverage)
-  - custom: combine individual regions below
-- include_face_skin (BOOLEAN): include face oval in custom mode
-- include_forehead (BOOLEAN)
-- include_eyebrows (BOOLEAN)
-- include_eyes (BOOLEAN)
-- include_nose (BOOLEAN)
-- include_mouth (BOOLEAN)
-- expand (INT): morphology grow/shrink mask size
-- feather (INT): feather the edges of the final composite mask
+Advanced scheduling system compatible with ai-toolkit models, implementing flow matching ODE for modern diffusion models.
 
-Outputs:
-- mask (MASK): region mask (white = include)
-- preview (IMAGE): green overlay preview for visual validation
+#### FlowMatchScheduler (Advanced)
+Full control over all scheduling parameters for custom workflows.
 
-Tips:
-- For full head transfer with the overlay node, choose preset=full_head and feed this mask as region_mask with use_region_mask=True.
-- For custom mixes (e.g., skin + eyebrows + hair), enable the respective booleans in custom mode.
+**Features:**
+- 🔄 Multiple scheduler types (linear, sigmoid, shift, exponential)
+- 📏 Dynamic resolution-based shifting
+- 📈 Bell curve timestep weighting
+- 🎯 Terminal stretching for models like Qwen
 
-## Recommended Pipelines
+**Scheduler Types:**
+- `linear`: Standard linear distribution
+- `sigmoid`: Concentrated in center (ai-toolkit style)
+- `shift`: Linear time shift
+- `shift_exponential`: Exponential shift (Qwen/Z-Image-Turbo)
+- `flux_shift`: Flux-specific with doubled patch size
+- `lognorm_blend`: Lognormal + linear blend
+- `weighted`: Bell-shaped weighting
 
-A) Full Head Transfer with Color Match
-1) Face Region Options:
-   - image = source_face
-   - preset = full_head
-   - expand = 4..12 (optional), feather = 8..20 (optional)
-2) Planar Face Overlay:
-   - source_face = same as above
-   - target_body = body image
-   - auto_flip = True
-   - pre_normalize_camera = True, alignment_axis = "nose", anchor_point = "nose_tip"
-   - scale_method = "nose_to_chin" (or "interocular"), scale_adjust = 0.9..1.2
-   - use_region_mask = True, region_mask = mask from step 1
-   - color_match = True, method = "lab", strength = 0.6..0.8
-   - Check debug_preview and tweak offsets/scale/feather if needed
+#### FlowMatchSchedulerPresets
+Quick presets for popular models - no configuration needed!
 
-B) Face-Only Replacement
-1) Face Region Options:
-   - image = source_face
-   - preset = face_oval
-   - expand/feather as needed
-2) Planar Face Overlay:
-   - use_region_mask = True and provide the mask
-   - Or leave use_region_mask = False to use the default oval
-   - color_match optional
+**Available Presets:**
+| Model | Steps | CFG | Shift Type | Terminal |
+|-------|-------|-----|------------|----------|
+| `flux_dev` | 20-50 | 3.5-7.0 | Linear | 0.0 |
+| `flux_schnell` | 4-8 | 1.0 | Linear | 0.0 |
+| `qwen_image` | 20 | 2.5 | Exponential | 0.02 |
+| `z_image_turbo` | 20-30 | 2.0-3.0 | Exponential | 0.02 |
+| `lumina` | 20-30 | 3.0-5.0 | Exponential | 0.0 |
+| `hidream` | 20-30 | 3.5-7.0 | Linear | 0.0 |
+| `stable_diffusion` | 20-50 | 7.0 | Linear | 0.0 |
+| `mochi` | 20-30 | 3.5 | Linear + Inverted | 0.0 |
 
-C) Eyes + Eyebrows + Mouth Only
-1) Face Region Options:
-   - preset = custom
-   - include_eyes = True, include_eyebrows = True, include_mouth = True
-2) Planar Face Overlay with use_region_mask = True
+#### FlowMatchAutoConfig
+Automatically outputs optimal sampling parameters for your model.
 
-## JSON Outputs
+**Outputs:**
+- Steps count
+- CFG scale
+- Denoise strength
+- Recommended sampler name
+- Scheduler type
 
-src_landmarks_in_target_json:
-- A JSON string encoding float coordinates of the source landmarks transformed to target space
-- Shape: N x 2
-- Usage: downstream UI overlays, debugging, or to drive other geometric operations
+#### FlowMatchGuide
+Displays detailed recommendations and best practices for each model type.
 
-metrics_json:
-- Contains final alignment info and anchor positions
-- Can be used by automation scripts to track quality or consistency
+## 🎨 Example Workflows
 
-Example metrics_json:
+### Full Head Transfer with Color Match
+```
+1. WA_FaceRegionOptions
+   ├─ image: source_face
+   ├─ preset: "full_head"
+   ├─ expand: 8
+   └─ feather: 12
+   
+2. WA_PlanarFaceOverlay
+   ├─ source_face: [same]
+   ├─ target_body: [body_image]
+   ├─ auto_flip: True
+   ├─ alignment_axis: "nose"
+   ├─ anchor_point: "nose_tip"
+   ├─ scale_method: "nose_to_chin"
+   ├─ use_region_mask: True
+   ├─ region_mask: [from step 1]
+   ├─ color_match: True
+   ├─ color_match_method: "lab"
+   └─ color_match_strength: 0.7
+```
+
+### Qwen Image Edit with FlowMatch
+```
+1. FlowMatchSchedulerPresets
+   ├─ preset: "qwen_image"
+   ├─ steps: 20
+   └─ latent_image: [your_latent]
+   
+2. SamplerCustomAdvanced
+   ├─ sigmas: [from scheduler]
+   ├─ sampler: "euler"
+   └─ cfg: 2.5
+```
+
+### Custom Face Parts Transfer
+```
+1. WA_FaceRegionOptions
+   ├─ preset: "custom"
+   ├─ include_eyes: True
+   ├─ include_eyebrows: True
+   └─ include_mouth: True
+   
+2. WA_PlanarFaceOverlay
+   ├─ use_region_mask: True
+   └─ region_mask: [from step 1]
+```
+
+## 🔧 Technical Details
+
+### Face Overlay Algorithm
+1. **Landmark Detection**: MediaPipe face mesh (478 points)
+2. **Orientation Matching**: Yaw-based auto-flip with fallback to eye ordering
+3. **Transform Calculation**: Planar only (rotation + scale + translation)
+4. **Color Harmonization**: LAB space matching within masked region
+5. **Composition**: Feathered mask blending
+
+### FlowMatch Implementation
+Based on ai-toolkit's `CustomFlowMatchEulerDiscreteScheduler`:
+- **Flow ODE**: `x_t = (1-t)*x_0 + t*noise`
+- **Dynamic Shift**: `mu = m * seq_len + b`
+- **Bell Weighting**: `exp(-2 * ((x - n/2) / n)^2)`
+- **Terminal Stretching**: Ensures final sigma reaches specified value
+
+## 📊 JSON Output Examples
+
+### Metrics JSON (Face Overlay)
+```json
 {
   "alignment_axis": "nose",
   "anchor_point": "nose_tip",
@@ -202,31 +233,66 @@ Example metrics_json:
   "yaw_sign": {"source": 1, "target": 1},
   "anchor_src_xy": {"x": 123.0, "y": 210.5},
   "anchor_tgt_xy": {"x": 340.0, "y": 400.0},
-  "anchor_src_in_target_xy": {"x": 338.2, "y": 398.7},
   "applied_color_match": true,
   "color_match_method": "lab",
   "color_match_strength": 0.7,
   "applied_bbox_xyxy": [300, 250, 480, 520],
   "target_size_hw": {"h": 1024, "w": 768}
 }
+```
 
-## Limitations
+## ⚠️ Limitations
 
-- Planar only: no perspective or non-linear warps. For strong yaw/pitch mismatches, geometry may not perfectly match.
-- Landmark dependency: quality relies on MediaPipe detection stability.
-- Extreme profiles or occlusions can reduce orientation detection accuracy. Consider disabling auto_flip or using a manual flip upstream in those cases.
+- **Face Overlay**: Planar transforms only - no perspective/3D warping
+- **Landmark Dependency**: Quality relies on MediaPipe detection
+- **Extreme Profiles**: May require manual flip adjustment
+- **FlowMatch**: LogNormal distribution requires scipy
 
-## Development Notes
+## 🤝 Contributing
 
-- The nodes operate on BGR images (OpenCV). Conversion to/from ComfyUI tensors is handled.
-- Color match uses only the masked region to avoid contaminating background statistics.
-- For best results, keep source face and target body at similar resolution and crop regions appropriately.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-MIT
+## 📝 License
 
-## Acknowledgements
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- MediaPipe Face Mesh (Google/MediaPipe)
+## 🙏 Acknowledgements
+
+- [MediaPipe Face Mesh](https://google.github.io/mediapipe/) by Google
+- [ai-toolkit](https://github.com/ostris/ai-toolkit) by Ostris
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) by comfyanonymous
 - OpenCV and NumPy communities
+
+## 👤 Author
+
+**Alisson Anjos (NRDX)**
+- GitHub: [@alisson-anjos](https://github.com/alisson-anjos)
+- HuggingFace: [@Alissonerdx](https://huggingface.co/Alissonerdx)
+- CivitAI: [NRDX](https://civitai.com/user/NRDX)
+- LinkedIn: [/in/alissonpereiraa](https://www.linkedin.com/in/alissonpereiraa)
+
+<a href="https://buymeacoffee.com/nrdx" target="_blank" style="display: inline-block; margin-bottom: 10px;">
+                <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&amp;emoji=&amp;slug=nrdx&amp;button_colour=FFDD00&amp;font_colour=000000&amp;font_family=Cookie&amp;outline_colour=000000&amp;coffee_colour=ffffff" alt="Buy Me A Coffee" height="40">
+            </a>
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=alisson-anjos/ComfyUI-Workarounds&type=Date)](https://star-history.com/#alisson-anjos/ComfyUI-Workarounds&Date)
+
+
+## 💬 Support
+
+If you have any questions or issues:
+1. Check the [Issues](https://github.com/alisson-anjos/ComfyUI-Workarounds/issues) page
+2. Join the discussion in ComfyUI Discord
+3. Create a new issue with detailed description
+
+---
+
+Made with ❤️ for the ComfyUI community
