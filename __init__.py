@@ -20,7 +20,7 @@ from .nodes.flowmatch_scheduler import (
     FlowMatchGuide
 )
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 NODE_CLASS_MAPPINGS = {
     # Face nodes
